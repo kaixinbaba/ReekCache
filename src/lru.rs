@@ -27,7 +27,8 @@ impl<T: Ord> LRU<T> {
     }
 }
 
-pub(crate) struct Cache<T> {
+/// 为了在缓存中存储字节，所以只要能转换成字节数组的类型都是允许的
+pub(crate) struct Cache<T: Into<Vec<u8>>> {
     max_size: usize,
     cache: HashMap<String, T>,
     lru: LRU<String>,
@@ -35,7 +36,7 @@ pub(crate) struct Cache<T> {
 }
 
 
-impl<T> Cache<T> {
+impl<T: Into<Vec<u8>>> Cache<T> {
     pub(crate) fn new(max_size: usize) -> Self {
         Cache {
             max_size,
@@ -102,27 +103,33 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test1() {
+        let x: Vec<u8> = "123".to_string().into();
+        println!("{:?}", x);
+    }
+
+    #[test]
     fn test_add() {
-        let mut cache = Cache::<i32>::new(2);
-        cache.add("123", 11);
-        cache.add("23", 12);
-        assert_eq!(cache.get("123"), Some(&11));
-        assert_eq!(cache.get("23"), Some(&12));
-        cache.add("45", 13);
-        assert_eq!(cache.get("45"), Some(&13));
+        let mut cache = Cache::<&str>::new(2);
+        cache.add("123", "11");
+        cache.add("23", "12");
+        assert_eq!(cache.get("123"), Some(&"11"));
+        assert_eq!(cache.get("23"), Some(&"12"));
+        cache.add("45", "13");
+        assert_eq!(cache.get("45"), Some(&"13"));
         assert_eq!(cache.get("123"), None);
         assert_eq!(cache.get("none"), None);
     }
 
     #[test]
     fn test_with_evicted() {
-        let mut cache = Cache::<i32>::new_with_evicted(2, Box::new(|key, value| {
+        let mut cache = Cache::<&str>::new_with_evicted(2, Box::new(|key, value| {
             println!("removed key: {:?} -> value: {:?}", key, value);
         }));
-        cache.add("123", 11);
-        cache.add("23", 11);
-        cache.add("45", 11);
+        cache.add("123", "11");
+        cache.add("23", "11");
+        cache.add("45", "11");
         cache.get("23");
-        cache.add("xjj", 11);
+        cache.add("xjj", "11");
     }
 }
